@@ -592,6 +592,126 @@ body {
 .alert-title-cutoff { color: var(--label); }
 .alert-msg   { font-size: 13px; color: var(--label); margin-bottom: 3px; line-height: 1.45; }
 .alert-hint  { font-size: 11px; color: var(--sec); line-height: 1.4; }
+
+/* ─────────────────────────────────────────────────────────────────── */
+/* Sidebar brand (desktop only, hidden on mobile)                      */
+/* ─────────────────────────────────────────────────────────────────── */
+.sidebar-brand { display: none; }
+
+/* ══════════════════════════════════════════════════════════════════ */
+/* RESPONSIVE — Tablet  ≥ 640px                                       */
+/* ══════════════════════════════════════════════════════════════════ */
+@media (min-width: 640px) {
+  .page-inner      { max-width: 580px; padding: 0 28px 32px; }
+  .nav             { max-width: 580px; }
+  .ring-container  { width: 272px; height: 272px; }
+  .water-ring-wrap { width: 224px; height: 224px; }
+  .summary-grid    { grid-template-columns: repeat(4, 1fr); }
+  .quick-grid      { grid-template-columns: repeat(4, 1fr); }
+}
+
+/* ══════════════════════════════════════════════════════════════════ */
+/* RESPONSIVE — Desktop  ≥ 1024px                                     */
+/* ══════════════════════════════════════════════════════════════════ */
+@media (min-width: 1024px) {
+  /* 2-column layout: sidebar | content */
+  body {
+    display: grid;
+    grid-template-columns: 240px 1fr;
+    height: 100vh;
+    overflow: hidden;
+  }
+
+  /* ── Sidebar ── */
+  .tab-bar {
+    position: static;
+    grid-column: 1;
+    grid-row: 1;
+    flex-direction: column;
+    width: 240px;
+    height: 100vh;
+    padding: 28px 12px;
+    border-top: none;
+    border-right: 0.5px solid var(--sep2);
+    align-items: flex-start;
+    justify-content: flex-start;
+    gap: 3px;
+    box-shadow: none;
+  }
+
+  .sidebar-brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 4px 12px 0;
+    margin-bottom: 28px;
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: -0.4px;
+    color: var(--label);
+    width: 100%;
+    flex-shrink: 0;
+  }
+  .sidebar-brand-icon { font-size: 24px; line-height: 1; }
+
+  .tab-item {
+    flex-direction: row;
+    width: 100%;
+    justify-content: flex-start;
+    padding: 11px 14px;
+    border-radius: 12px;
+    gap: 12px;
+    font-size: 15px;
+    font-weight: 500;
+    color: var(--sec);
+  }
+  .tab-item .tab-icon { font-size: 20px; line-height: 1; }
+
+  .tab-item:hover { background: var(--sep); }
+  .tab-item.active-water    { background: rgba(0,122,255,.1);  color: var(--water); }
+  .tab-item.active-pomodoro { background: rgba(255,59,48,.1);  color: var(--focus); }
+  .tab-item.active-calendar { background: rgba(0,122,255,.1);  color: var(--long);  }
+  .tab-item.active-report   { background: rgba(0,122,255,.1);  color: var(--long);  }
+
+  /* ── Content area ── */
+  .page {
+    position: static;
+    grid-column: 2;
+    grid-row: 1;
+    height: 100vh;
+    overflow-y: auto;
+    inset: unset;
+    bottom: unset;
+    padding-top: 0;
+    display: none;
+    flex-direction: column;
+    align-items: center;
+  }
+  .page.active { display: flex; }
+
+  .page-inner {
+    max-width: 800px;
+    padding: 36px 48px 56px;
+  }
+  .nav { max-width: 800px; }
+
+  /* ── Larger rings ── */
+  .ring-container  { width: 300px; height: 300px; }
+  .water-ring-wrap { width: 256px; height: 256px; }
+
+  /* ── Report: 4-col summary ── */
+  .summary-grid { grid-template-columns: repeat(4, 1fr); }
+
+  /* ── Sheet: centre over content area only ── */
+  .sheet-overlay { left: 240px; }
+  .sheet {
+    max-width: min(520px, calc(100vw - 240px));
+    left: calc(240px + (100vw - 240px) / 2);
+  }
+
+  /* ── Toast: centre in content area ── */
+  .toast { left: calc(240px + (100vw - 240px) / 2); }
+}
 </style>
 </head>
 <body>
@@ -841,6 +961,10 @@ body {
 
 <!-- Tab Bar -->
 <nav class="tab-bar" id="tabBar">
+  <div class="sidebar-brand">
+    <span class="sidebar-brand-icon">⏰</span>
+    <span>Health Clock</span>
+  </div>
   <button class="tab-item active-water" data-tab="water">
     <span class="tab-icon">💧</span>喝水
   </button>
