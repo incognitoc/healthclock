@@ -1,0 +1,1734 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>蕃茄鐘</title>
+<style>
+/* ─────────────────────────────────────────────────────────────────── */
+/* Reset & Variables                                                   */
+/* ─────────────────────────────────────────────────────────────────── */
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+:root {
+  --focus:  #FF3B30;
+  --short:  #34C759;
+  --long:   #007AFF;
+  --water:  #007AFF;
+  --bg:     #F2F2F7;
+  --card:   #FFFFFF;
+  --label:  #1C1C1E;
+  --sec:    #6C6C70;
+  --sep:    rgba(60,60,67,.12);
+  --sep2:   #E5E5EA;
+  --radius: 20px;
+  --tab-h:  83px;
+  --accent: var(--focus);
+  --focus-light: rgba(255,59,48,.12);
+  --short-light: rgba(52,199,89,.12);
+  --long-light:  rgba(0,122,255,.12);
+  --water-light: rgba(0,122,255,.12);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg:   #000000;
+    --card: #1C1C1E;
+    --label: #FFFFFF;
+    --sec:  rgba(235,235,245,.6);
+    --sep:  rgba(84,84,88,.65);
+    --sep2: #38383A;
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────────── */
+/* Layout                                                              */
+/* ─────────────────────────────────────────────────────────────────── */
+html, body { height: 100%; }
+
+body {
+  font-family: -apple-system, "SF Pro Display", "SF Pro Text", BlinkMacSystemFont, sans-serif;
+  background: var(--bg);
+  color: var(--label);
+  overflow: hidden;
+}
+
+/* Pages */
+.page {
+  display: none;
+  position: fixed;
+  inset: 0;
+  bottom: calc(var(--tab-h) + env(safe-area-inset-bottom, 0px));
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding-top: env(safe-area-inset-top, 44px);
+}
+.page.active { display: flex; flex-direction: column; align-items: center; }
+
+.page-inner {
+  width: 100%;
+  max-width: 430px;
+  padding: 0 16px;
+  padding-bottom: 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* Tab bar */
+.tab-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0; right: 0;
+  height: calc(var(--tab-h) + env(safe-area-inset-bottom, 0px));
+  background: var(--card);
+  border-top: 0.5px solid var(--sep2);
+  display: flex;
+  align-items: flex-start;
+  padding-top: 4px;
+  z-index: 900;
+}
+.tab-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 6px 0 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--sec);
+  font-size: 10px;
+  font-weight: 500;
+  transition: color 0.2s;
+}
+.tab-item .tab-icon { font-size: 22px; line-height: 1; }
+.tab-item.active-pomodoro { color: var(--focus); }
+.tab-item.active-water    { color: var(--water); }
+.tab-item.active-calendar { color: var(--long);  }
+.tab-item.active-report   { color: var(--long);  }
+
+/* ─────────────────────────────────────────────────────────────────── */
+/* Nav bar                                                             */
+/* ─────────────────────────────────────────────────────────────────── */
+.nav {
+  width: 100%;
+  max-width: 430px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 0 8px;
+}
+.nav-title { font-size: 17px; font-weight: 600; letter-spacing: -.4px; }
+.nav-spacer { width: 44px; }
+.nav-btn {
+  background: none; border: none; cursor: pointer;
+  color: var(--accent);
+  padding: 8px; border-radius: 8px;
+  display: flex; align-items: center;
+  transition: opacity .15s;
+}
+.nav-btn:active { opacity: .5; }
+.nav-btn svg { width: 22px; height: 22px; }
+
+/* ─────────────────────────────────────────────────────────────────── */
+/* Segment Control                                                      */
+/* ─────────────────────────────────────────────────────────────────── */
+.segment-wrap {
+  width: 100%;
+  background: var(--sep);
+  border-radius: 12px;
+  padding: 2px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  margin-bottom: 16px;
+}
+.seg-btn {
+  background: none; border: none; border-radius: 10px;
+  padding: 8px 4px; font-size: 13px; font-weight: 500;
+  color: var(--sec); cursor: pointer;
+  transition: all .25s cubic-bezier(.4,0,.2,1);
+}
+.seg-btn.active {
+  background: var(--card);
+  color: var(--label); font-weight: 600;
+  box-shadow: 0 1px 4px rgba(0,0,0,.12), 0 .5px 1px rgba(0,0,0,.08);
+}
+
+/* ─────────────────────────────────────────────────────────────────── */
+/* Timer Card                                                           */
+/* ─────────────────────────────────────────────────────────────────── */
+.timer-card {
+  width: 100%;
+  background: var(--card);
+  border-radius: var(--radius);
+  padding: 32px 24px 28px;
+  display: flex; flex-direction: column; align-items: center;
+  box-shadow: 0 2px 12px rgba(0,0,0,.06), 0 .5px 2px rgba(0,0,0,.05);
+  margin-bottom: 12px;
+}
+
+/* Timer Ring */
+.ring-container {
+  position: relative; width: 240px; height: 240px; margin-bottom: 28px;
+}
+.ring-svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+.ring-bg   { fill: none; stroke: var(--sep2); stroke-width: 10; }
+.ring-progress {
+  fill: none; stroke: var(--focus); stroke-width: 10;
+  stroke-linecap: round;
+  stroke-dasharray: 678.6;
+  stroke-dashoffset: 0;
+  transition: stroke-dashoffset 1s linear, stroke .4s ease;
+  filter: drop-shadow(0 0 6px rgba(255,59,48,.5));
+}
+.ring-center {
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
+}
+.timer-display {
+  font-size: 62px; font-weight: 300; letter-spacing: -3px;
+  line-height: 1; font-variant-numeric: tabular-nums;
+  color: var(--focus); transition: color .4s;
+}
+.timer-mode-label {
+  font-size: 13px; font-weight: 500; color: var(--sec);
+  letter-spacing: .5px; text-transform: uppercase;
+}
+
+/* Session dots */
+.session-dots { display: flex; gap: 8px; margin-bottom: 28px; }
+.dot {
+  width: 10px; height: 10px; border-radius: 50%;
+  background: var(--sep2); transition: all .3s cubic-bezier(.34,1.56,.64,1);
+}
+.dot.done { background: var(--focus); transform: scale(1.1); box-shadow: 0 0 8px rgba(255,59,48,.4); }
+
+/* Controls */
+.controls { display: flex; align-items: center; gap: 24px; }
+.ctrl-btn {
+  background: none; border: none; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 50%; transition: all .15s;
+}
+.ctrl-btn:active { transform: scale(.88); opacity: .7; }
+.btn-secondary {
+  width: 52px; height: 52px;
+  background: var(--focus-light); color: var(--focus);
+}
+.btn-secondary svg { width: 22px; height: 22px; }
+.btn-primary {
+  width: 72px; height: 72px;
+  background: var(--focus); color: #fff;
+  box-shadow: 0 4px 16px rgba(255,59,48,.4), 0 1px 4px rgba(255,59,48,.3);
+  transition: all .25s cubic-bezier(.34,1.56,.64,1);
+}
+.btn-primary:active { transform: scale(.88); }
+.btn-primary svg { width: 28px; height: 28px; }
+
+/* ─────────────────────────────────────────────────────────────────── */
+/* Stats Card                                                           */
+/* ─────────────────────────────────────────────────────────────────── */
+.stats-card {
+  width: 100%;
+  background: var(--card);
+  border-radius: var(--radius);
+  overflow: hidden;
+  box-shadow: 0 2px 12px rgba(0,0,0,.06), 0 .5px 2px rgba(0,0,0,.05);
+  margin-bottom: 12px;
+}
+.stats-row {
+  display: flex; align-items: center;
+  padding: 14px 16px; gap: 12px;
+  border-bottom: .5px solid var(--sep);
+}
+.stats-row:last-child { border-bottom: none; }
+.stats-icon {
+  width: 32px; height: 32px; border-radius: 8px;
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  font-size: 16px;
+}
+.stats-icon.red   { background: var(--focus-light); }
+.stats-icon.green { background: var(--short-light); }
+.stats-icon.blue  { background: var(--long-light);  }
+.stats-text { flex: 1; }
+.stats-label { font-size: 15px; color: var(--label); }
+.stats-sub   { font-size: 12px; color: var(--sec); margin-top: 1px; }
+.stats-value { font-size: 17px; font-weight: 600; color: var(--label); font-variant-numeric: tabular-nums; }
+
+/* ─────────────────────────────────────────────────────────────────── */
+/* Mode color switching                                                 */
+/* ─────────────────────────────────────────────────────────────────── */
+.mode-short .ring-progress { stroke: var(--short); filter: drop-shadow(0 0 6px rgba(52,199,89,.5)); }
+.mode-short .timer-display { color: var(--short); }
+.mode-short .btn-primary   { background: var(--short); box-shadow: 0 4px 16px rgba(52,199,89,.4); }
+.mode-short .btn-secondary { background: var(--short-light); color: var(--short); }
+.mode-short .dot.done      { background: var(--short); box-shadow: 0 0 8px rgba(52,199,89,.4); }
+
+.mode-long .ring-progress { stroke: var(--long); filter: drop-shadow(0 0 6px rgba(0,122,255,.5)); }
+.mode-long .timer-display { color: var(--long); }
+.mode-long .btn-primary   { background: var(--long); box-shadow: 0 4px 16px rgba(0,122,255,.4); }
+.mode-long .btn-secondary { background: var(--long-light); color: var(--long); }
+.mode-long .dot.done      { background: var(--long); box-shadow: 0 0 8px rgba(0,122,255,.4); }
+
+/* Ring pulse when running */
+@keyframes pulse-ring {
+  0%, 100% { transform: rotate(-90deg) scale(1); }
+  50%       { transform: rotate(-90deg) scale(1.01); }
+}
+.running .ring-svg { animation: pulse-ring 2s ease-in-out infinite; }
+
+/* ─────────────────────────────────────────────────────────────────── */
+/* Settings Sheet (Pomodoro)                                            */
+/* ─────────────────────────────────────────────────────────────────── */
+.sheet-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,.4);
+  z-index: 950; opacity: 0; pointer-events: none;
+  transition: opacity .3s;
+  backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
+}
+.sheet-overlay.visible { opacity: 1; pointer-events: all; }
+
+.sheet {
+  position: fixed; bottom: 0; left: 50%;
+  transform: translateX(-50%) translateY(100%);
+  width: 100%; max-width: 430px;
+  background: var(--bg);
+  border-radius: 20px 20px 0 0;
+  padding-bottom: env(safe-area-inset-bottom, 20px);
+  z-index: 951;
+  transition: transform .4s cubic-bezier(.32,.72,0,1);
+}
+.sheet.visible { transform: translateX(-50%) translateY(0); }
+
+.sheet-handle {
+  width: 36px; height: 5px;
+  background: var(--sep2); border-radius: 3px;
+  margin: 12px auto 16px;
+}
+.sheet-title {
+  font-size: 17px; font-weight: 600; text-align: center;
+  padding-bottom: 16px; color: var(--label);
+}
+.sheet-section {
+  margin: 0 16px 12px;
+  background: var(--card);
+  border-radius: 14px; overflow: hidden;
+}
+.sheet-row {
+  display: flex; align-items: center;
+  padding: 13px 16px;
+  border-bottom: .5px solid var(--sep); gap: 12px;
+}
+.sheet-row:last-child { border-bottom: none; }
+.sheet-row-label { flex: 1; font-size: 15px; color: var(--label); }
+.sheet-stepper { display: flex; align-items: center; gap: 12px; }
+.step-btn {
+  width: 30px; height: 30px; border-radius: 50%;
+  background: var(--focus-light); color: var(--focus);
+  border: none; cursor: pointer; font-size: 18px; font-weight: 500;
+  display: flex; align-items: center; justify-content: center;
+  transition: opacity .15s; line-height: 1;
+}
+.step-btn:active { opacity: .5; }
+.step-val {
+  font-size: 17px; font-weight: 600; min-width: 32px;
+  text-align: center; font-variant-numeric: tabular-nums; color: var(--label);
+}
+.sheet-btn-row { padding: 8px 16px 12px; }
+.sheet-done-btn {
+  width: 100%; padding: 14px;
+  background: var(--focus); color: #fff;
+  border: none; border-radius: 14px;
+  font-size: 17px; font-weight: 600; cursor: pointer;
+  transition: opacity .15s;
+}
+.sheet-done-btn:active { opacity: .8; }
+
+/* ─────────────────────────────────────────────────────────────────── */
+/* Toast                                                                */
+/* ─────────────────────────────────────────────────────────────────── */
+.toast {
+  position: fixed; top: 60px; left: 50%;
+  transform: translateX(-50%) translateY(-140px);
+  background: var(--card); color: var(--label);
+  padding: 12px 20px; border-radius: 14px;
+  font-size: 15px; font-weight: 500;
+  box-shadow: 0 8px 32px rgba(0,0,0,.2);
+  z-index: 999; transition: transform .4s cubic-bezier(.34,1.56,.64,1);
+  white-space: nowrap; pointer-events: none;
+}
+.toast.show { transform: translateX(-50%) translateY(0); }
+
+/* ─────────────────────────────────────────────────────────────────── */
+/* Water Tab                                                            */
+/* ─────────────────────────────────────────────────────────────────── */
+.water-ring-wrap {
+  position: relative; width: 200px; height: 200px;
+  margin: 8px auto 12px;
+}
+.water-ring-svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+.water-ring-bg  { fill: none; stroke: var(--sep2); stroke-width: 12; }
+.water-ring-prog {
+  fill: none; stroke: var(--water); stroke-width: 12;
+  stroke-linecap: round;
+  stroke-dasharray: 552.9;
+  stroke-dashoffset: 552.9;
+  transition: stroke-dashoffset .6s ease;
+  filter: drop-shadow(0 0 6px rgba(0,122,255,.4));
+}
+.water-ring-center {
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+}
+.water-ring-val { font-size: 36px; font-weight: 700; color: var(--water); font-variant-numeric: tabular-nums; }
+.water-ring-unit { font-size: 14px; color: var(--sec); }
+
+.water-goal-row {
+  display: flex; align-items: center; gap: 12px;
+  margin-bottom: 4px;
+}
+.water-goal-txt { font-size: 14px; color: var(--sec); }
+.water-pct { font-size: 22px; font-weight: 700; color: var(--water); }
+.water-reminder { font-size: 12px; color: var(--sec); margin-bottom: 16px; text-align: center; }
+
+/* Quick add buttons */
+.quick-grid {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px;
+  width: 100%; margin-bottom: 16px;
+}
+.quick-btn {
+  background: var(--card); border: none; border-radius: 14px;
+  padding: 10px 4px 8px; cursor: pointer;
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  box-shadow: 0 1px 8px rgba(0,0,0,.06);
+  transition: transform .15s, box-shadow .15s;
+}
+.quick-btn:active { transform: scale(.94); box-shadow: 0 1px 4px rgba(0,0,0,.05); }
+.quick-btn-ml   { font-size: 13px; font-weight: 700; color: var(--water); }
+.quick-btn-lbl  { font-size: 10px; color: var(--sec); }
+
+/* Log list */
+.section-hdr { width: 100%; font-size: 13px; font-weight: 600; color: var(--sec); padding: 0 4px 8px; }
+.log-card {
+  width: 100%;
+  background: var(--card); border-radius: var(--radius);
+  overflow: hidden;
+  box-shadow: 0 2px 10px rgba(0,0,0,.06);
+  margin-bottom: 12px;
+}
+.log-empty { text-align: center; font-size: 14px; color: var(--sec); padding: 24px 0; }
+.log-row {
+  display: flex; align-items: center;
+  padding: 12px 16px; gap: 12px;
+  border-bottom: .5px solid var(--sep);
+}
+.log-row:last-child { border-bottom: none; }
+.log-time { font-size: 13px; color: var(--sec); width: 44px; flex-shrink: 0; }
+.log-amount { font-size: 15px; font-weight: 600; color: var(--water); flex: 1; }
+.log-bar-wrap { width: 80px; height: 6px; background: var(--sep2); border-radius: 3px; flex-shrink: 0; }
+.log-bar { height: 6px; background: var(--water); border-radius: 3px; transition: width .3s; }
+.log-del {
+  background: none; border: none; cursor: pointer;
+  color: var(--sec); font-size: 18px; padding: 4px;
+  transition: color .15s;
+}
+.log-del:active { color: var(--focus); }
+
+/* Health tip card */
+.tip-card {
+  width: 100%; background: rgba(0,122,255,.08);
+  border-radius: 14px; padding: 12px 14px;
+  display: flex; gap: 10px; align-items: flex-start;
+  margin-bottom: 12px;
+}
+.tip-icon { font-size: 18px; flex-shrink: 0; margin-top: 1px; }
+.tip-text { font-size: 13px; color: var(--water); line-height: 1.5; }
+.tip-source { font-size: 11px; color: var(--sec); margin-top: 3px; }
+
+/* Water setup sheet */
+.water-setup-sheet .step-btn { background: var(--water-light); color: var(--water); }
+.water-setup-sheet .sheet-done-btn { background: var(--water); }
+.gender-row { display: flex; gap: 10px; margin: 8px 0 16px; width: 100%; }
+.gender-card {
+  flex: 1; background: var(--card); border-radius: 14px;
+  padding: 14px 8px 10px; display: flex; flex-direction: column; align-items: center; gap: 6px;
+  border: 2px solid transparent; cursor: pointer; transition: border-color .2s;
+}
+.gender-card.active { border-color: var(--water); }
+.gender-emoji { font-size: 28px; }
+.gender-label { font-size: 14px; font-weight: 600; color: var(--sec); }
+.gender-card.active .gender-label { color: var(--water); }
+.water-goal-display {
+  width: 100%; background: rgba(0,122,255,.08);
+  border-radius: 14px; padding: 16px;
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
+  margin: 0 0 12px;
+}
+.water-goal-big { font-size: 32px; font-weight: 700; color: var(--water); }
+.water-goal-formula { font-size: 13px; color: var(--sec); }
+
+/* ─────────────────────────────────────────────────────────────────── */
+/* Calendar Tab                                                         */
+/* ─────────────────────────────────────────────────────────────────── */
+.month-nav {
+  display: flex; align-items: center; justify-content: space-between;
+  width: 100%; background: var(--card);
+  border-radius: 14px; padding: 10px 12px; margin-bottom: 12px;
+  box-shadow: 0 1px 6px rgba(0,0,0,.05);
+}
+.month-nav-btn {
+  background: none; border: none; cursor: pointer;
+  color: var(--long); font-size: 20px; padding: 4px 8px;
+  border-radius: 8px; transition: opacity .15s;
+}
+.month-nav-btn:active { opacity: .5; }
+.month-label { font-size: 16px; font-weight: 600; color: var(--label); }
+
+.cal-weekdays {
+  display: grid; grid-template-columns: repeat(7, 1fr);
+  width: 100%; margin-bottom: 4px;
+}
+.cal-wday { font-size: 12px; font-weight: 600; text-align: center; padding: 4px 0; }
+.cal-wday.sun { color: var(--focus); }
+.cal-wday.sat { color: var(--long); }
+.cal-wday.mid { color: var(--sec); }
+
+.cal-grid {
+  display: grid; grid-template-columns: repeat(7, 1fr);
+  gap: 2px; width: 100%; margin-bottom: 12px;
+}
+.cal-cell {
+  display: flex; flex-direction: column; align-items: center;
+  padding: 4px 0; cursor: pointer;
+  border-radius: 10px; transition: background .15s; min-height: 52px;
+}
+.cal-cell:active { background: var(--sep); }
+.cal-day-num {
+  width: 30px; height: 30px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 15px;
+}
+.cal-day-num.today { background: var(--focus); color: #fff; font-weight: 700; }
+.cal-day-num.sun-num { color: var(--focus); }
+.cal-day-num.sat-num { color: var(--long); }
+.cal-dots { display: flex; gap: 3px; margin-top: 2px; flex-wrap: wrap; justify-content: center; max-width: 32px; }
+.cal-dot { width: 5px; height: 5px; border-radius: 50%; }
+.cal-dot.red  { background: var(--focus); }
+.cal-dot.blue { background: var(--long); }
+
+.cal-legend {
+  display: flex; gap: 16px; align-items: center; padding: 8px 4px;
+  width: 100%;
+}
+.legend-item { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--sec); }
+.legend-dot { width: 10px; height: 10px; border-radius: 50%; }
+.legend-dot.red  { background: var(--focus); }
+.legend-dot.blue { background: var(--long); }
+
+.cal-detail-card {
+  width: 100%; background: var(--card); border-radius: var(--radius);
+  padding: 16px; box-shadow: 0 2px 10px rgba(0,0,0,.06);
+  margin-bottom: 12px; display: none;
+}
+.cal-detail-card.visible { display: block; }
+.cal-detail-title { font-size: 15px; font-weight: 600; margin-bottom: 10px; color: var(--label); }
+.cal-detail-row { font-size: 14px; color: var(--sec); margin-bottom: 4px; }
+
+/* ─────────────────────────────────────────────────────────────────── */
+/* Report Tab                                                           */
+/* ─────────────────────────────────────────────────────────────────── */
+.summary-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
+  width: 100%; margin-bottom: 16px;
+}
+.summary-card {
+  background: var(--card); border-radius: 16px;
+  padding: 14px; box-shadow: 0 2px 8px rgba(0,0,0,.06);
+}
+.summary-card-emoji { font-size: 22px; margin-bottom: 6px; display: block; }
+.summary-card-val { font-size: 22px; font-weight: 700; color: var(--label); font-variant-numeric: tabular-nums; }
+.summary-card-unit { font-size: 11px; color: var(--sec); }
+.summary-card-label { font-size: 12px; color: var(--sec); margin-top: 2px; }
+
+.chart-section { width: 100%; margin-bottom: 16px; }
+.chart-title { font-size: 13px; font-weight: 600; color: var(--label); margin-bottom: 8px; padding: 0 2px; }
+.chart-wrap {
+  background: var(--card); border-radius: 14px;
+  padding: 12px 8px 8px;
+  box-shadow: 0 2px 8px rgba(0,0,0,.06);
+  overflow: hidden;
+}
+.chart-wrap svg { display: block; width: 100%; overflow: visible; }
+
+/* ─────────────────────────────────────────────────────────────────── */
+/* Water Alert Cards                                                   */
+/* ─────────────────────────────────────────────────────────────────── */
+.water-alert {
+  width: 100%;
+  border-radius: 16px;
+  padding: 12px 14px;
+  margin-bottom: 10px;
+  display: none;
+  gap: 10px;
+  align-items: flex-start;
+  border: 1px solid transparent;
+}
+.water-alert.visible { display: flex; }
+
+.water-alert-warn   { background: rgba(255,149,0,.10); border-color: rgba(255,149,0,.4); }
+.water-alert-cutoff { background: rgba(60,60,67,.06);  border-color: rgba(60,60,67,.18); }
+
+@media (prefers-color-scheme: dark) {
+  .water-alert-warn   { background: rgba(255,149,0,.15); }
+  .water-alert-cutoff { background: rgba(255,255,255,.06); }
+}
+
+.alert-icon  { font-size: 20px; flex-shrink: 0; margin-top: 1px; line-height: 1.3; }
+.alert-body  { flex: 1; min-width: 0; }
+.alert-title { font-size: 14px; font-weight: 600; margin-bottom: 4px; line-height: 1.3; }
+.alert-title-warn   { color: #CC7700; }
+.alert-title-cutoff { color: var(--label); }
+.alert-msg   { font-size: 13px; color: var(--label); margin-bottom: 3px; line-height: 1.45; }
+.alert-hint  { font-size: 11px; color: var(--sec); line-height: 1.4; }
+</style>
+</head>
+<body>
+
+<!-- ════════════════════════════════════════════════════════════════════ -->
+<!-- PAGE 1: 蕃茄鐘                                                      -->
+<!-- ════════════════════════════════════════════════════════════════════ -->
+<section class="page" id="page-pomodoro">
+<div class="page-inner">
+  <nav class="nav">
+    <div class="nav-spacer"></div>
+    <span class="nav-title">蕃茄鐘</span>
+    <button class="nav-btn" id="pmSettingsBtn" aria-label="設定">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="3"/>
+        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+      </svg>
+    </button>
+  </nav>
+
+  <div class="segment-wrap">
+    <button class="seg-btn active" data-mode="focus">專注</button>
+    <button class="seg-btn" data-mode="short">短休息</button>
+    <button class="seg-btn" data-mode="long">長休息</button>
+  </div>
+
+  <div class="timer-card" id="pmTimerCard">
+    <div class="ring-container" id="pmRingContainer">
+      <svg class="ring-svg" viewBox="0 0 240 240">
+        <circle class="ring-bg" cx="120" cy="120" r="108"/>
+        <circle class="ring-progress" id="pmRing" cx="120" cy="120" r="108"/>
+      </svg>
+      <div class="ring-center">
+        <div class="timer-display" id="pmTimerDisplay">25:00</div>
+        <div class="timer-mode-label" id="pmModeLabel">專注時間</div>
+      </div>
+    </div>
+
+    <div class="session-dots" id="pmSessionDots"></div>
+
+    <div class="controls">
+      <button class="ctrl-btn btn-secondary" id="pmResetBtn" aria-label="重設">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="1 4 1 10 7 10"/>
+          <path d="M3.51 15a9 9 0 1 0 .49-4.5"/>
+        </svg>
+      </button>
+      <button class="ctrl-btn btn-primary" id="pmPlayBtn" aria-label="開始">
+        <svg id="pmPlayIcon" viewBox="0 0 24 24" fill="currentColor">
+          <polygon points="5,3 19,12 5,21"/>
+        </svg>
+      </button>
+      <button class="ctrl-btn btn-secondary" id="pmSkipBtn" aria-label="跳過">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <polygon points="5 4 15 12 5 20" fill="currentColor" stroke="none"/>
+          <line x1="19" y1="5" x2="19" y2="19"/>
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <div class="stats-card">
+    <div class="stats-row">
+      <div class="stats-icon red">🍅</div>
+      <div class="stats-text">
+        <div class="stats-label">今日番茄</div>
+        <div class="stats-sub">完成的專注輪次</div>
+      </div>
+      <div class="stats-value" id="pmTodayCount">0</div>
+    </div>
+    <div class="stats-row">
+      <div class="stats-icon green">⏱</div>
+      <div class="stats-text">
+        <div class="stats-label">專注時長</div>
+        <div class="stats-sub">今日累計</div>
+      </div>
+      <div class="stats-value" id="pmTotalTime">0 分</div>
+    </div>
+    <div class="stats-row">
+      <div class="stats-icon blue">🔄</div>
+      <div class="stats-text">
+        <div class="stats-label">當前輪次</div>
+        <div class="stats-sub">第 <span id="pmCycleNum">1</span> 輪，共 <span id="pmIntervalDisplay">4</span> 輪</div>
+      </div>
+      <div class="stats-value" id="pmSessionNum">1/4</div>
+    </div>
+  </div>
+</div>
+</section>
+
+<!-- ════════════════════════════════════════════════════════════════════ -->
+<!-- PAGE 2: 喝水                                                        -->
+<!-- ════════════════════════════════════════════════════════════════════ -->
+<section class="page active" id="page-water">
+<div class="page-inner">
+  <nav class="nav">
+    <div class="nav-spacer"></div>
+    <span class="nav-title">今日喝水</span>
+    <button class="nav-btn" id="waterSettingsBtn" aria-label="設定" style="color:var(--water)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="3"/>
+        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+      </svg>
+    </button>
+  </nav>
+
+  <div class="water-ring-wrap">
+    <svg class="water-ring-svg" viewBox="0 0 200 200">
+      <circle class="water-ring-bg" cx="100" cy="100" r="88"/>
+      <circle class="water-ring-prog" id="waterRingProg" cx="100" cy="100" r="88"/>
+    </svg>
+    <div class="water-ring-center">
+      <div class="water-ring-val" id="waterTotal">0</div>
+      <div class="water-ring-unit">ml</div>
+    </div>
+  </div>
+
+  <div class="water-goal-row">
+    <span class="water-goal-txt" id="waterGoalTxt">目標：2,100 ml</span>
+    <span class="water-pct" id="waterPct">0%</span>
+  </div>
+  <div class="water-reminder" id="waterReminder">下次提醒：30 分鐘後</div>
+
+  <!-- ── 進度落後警告（剩餘時間短但還差很多水）─────────────────────── -->
+  <div class="water-alert water-alert-warn" id="waterAlertWarn">
+    <div class="alert-icon">⚠️</div>
+    <div class="alert-body">
+      <div class="alert-title alert-title-warn">進度落後</div>
+      <div class="alert-msg"  id="waterAlertWarnMsg"></div>
+      <div class="alert-hint" id="waterAlertWarnHint"></div>
+    </div>
+  </div>
+
+  <!-- ── 截止提醒（晚上 9 點後請停止飲水）───────────────────────────── -->
+  <div class="water-alert water-alert-cutoff" id="waterAlertCutoff">
+    <div class="alert-icon">🌙</div>
+    <div class="alert-body">
+      <div class="alert-title alert-title-cutoff">請停止飲水</div>
+      <div class="alert-msg">已超過晚上 9 點，今天請不要再喝水了。</div>
+      <div class="alert-hint">讓腎臟在夜間充分休息，避免夜間頻尿影響睡眠。</div>
+    </div>
+  </div>
+
+  <div class="quick-grid">
+    <button class="quick-btn" onclick="addWater(100)">
+      <span class="quick-btn-ml">100ml</span>
+      <span class="quick-btn-lbl">一口</span>
+    </button>
+    <button class="quick-btn" onclick="addWater(200)">
+      <span class="quick-btn-ml">200ml</span>
+      <span class="quick-btn-lbl">一杯</span>
+    </button>
+    <button class="quick-btn" onclick="addWater(350)">
+      <span class="quick-btn-ml">350ml</span>
+      <span class="quick-btn-lbl">大杯</span>
+    </button>
+    <button class="quick-btn" onclick="addWater(500)">
+      <span class="quick-btn-ml">500ml</span>
+      <span class="quick-btn-lbl">水瓶</span>
+    </button>
+  </div>
+
+  <div class="section-hdr">今日紀錄</div>
+  <div class="log-card" id="waterLogCard"></div>
+
+  <div class="tip-card">
+    <div class="tip-icon">💡</div>
+    <div>
+      <div class="tip-text">每日足量補水有助於維持健康、促進代謝及維持體力。</div>
+      <div class="tip-source">— 衛生福利部國民健康署建議</div>
+    </div>
+  </div>
+</div>
+</section>
+
+<!-- ════════════════════════════════════════════════════════════════════ -->
+<!-- PAGE 3: 日曆                                                        -->
+<!-- ════════════════════════════════════════════════════════════════════ -->
+<section class="page" id="page-calendar">
+<div class="page-inner">
+  <nav class="nav">
+    <div class="nav-spacer"></div>
+    <span class="nav-title">日曆</span>
+    <div class="nav-spacer"></div>
+  </nav>
+
+  <div class="month-nav">
+    <button class="month-nav-btn" id="calPrev">‹</button>
+    <span class="month-label" id="calMonthLabel">2026年3月</span>
+    <button class="month-nav-btn" id="calNext">›</button>
+  </div>
+
+  <div class="cal-weekdays">
+    <div class="cal-wday sun">日</div>
+    <div class="cal-wday mid">一</div>
+    <div class="cal-wday mid">二</div>
+    <div class="cal-wday mid">三</div>
+    <div class="cal-wday mid">四</div>
+    <div class="cal-wday mid">五</div>
+    <div class="cal-wday sat">六</div>
+  </div>
+
+  <div class="cal-grid" id="calGrid"></div>
+
+  <div class="cal-detail-card" id="calDetailCard">
+    <div class="cal-detail-title" id="calDetailTitle"></div>
+    <div id="calDetailBody"></div>
+  </div>
+
+  <div class="cal-legend">
+    <div class="legend-item"><div class="legend-dot red"></div>蕃茄輪次</div>
+    <div class="legend-item"><div class="legend-dot blue"></div>喝水紀錄</div>
+  </div>
+</div>
+</section>
+
+<!-- ════════════════════════════════════════════════════════════════════ -->
+<!-- PAGE 4: 報表                                                        -->
+<!-- ════════════════════════════════════════════════════════════════════ -->
+<section class="page" id="page-report">
+<div class="page-inner">
+  <nav class="nav">
+    <div class="nav-spacer"></div>
+    <span class="nav-title">月份報表</span>
+    <div class="nav-spacer"></div>
+  </nav>
+
+  <div class="month-nav">
+    <button class="month-nav-btn" id="repPrev">‹</button>
+    <span class="month-label" id="repMonthLabel">2026年3月</span>
+    <button class="month-nav-btn" id="repNext">›</button>
+  </div>
+
+  <div class="summary-grid" id="repSummaryGrid"></div>
+
+  <div class="chart-section">
+    <div class="chart-title">每日番茄輪次</div>
+    <div class="chart-wrap" id="repPomoChart"></div>
+  </div>
+
+  <div class="chart-section">
+    <div class="chart-title">每日喝水量</div>
+    <div class="chart-wrap" id="repWaterChart"></div>
+  </div>
+</div>
+</section>
+
+<!-- Tab Bar -->
+<nav class="tab-bar" id="tabBar">
+  <button class="tab-item active-water" data-tab="water">
+    <span class="tab-icon">💧</span>喝水
+  </button>
+  <button class="tab-item" data-tab="pomodoro">
+    <span class="tab-icon">⏱</span>蕃茄鐘
+  </button>
+  <button class="tab-item" data-tab="calendar">
+    <span class="tab-icon">📅</span>日曆
+  </button>
+  <button class="tab-item" data-tab="report">
+    <span class="tab-icon">📊</span>報表
+  </button>
+</nav>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<!-- Pomodoro Settings Sheet -->
+<div class="sheet-overlay" id="pmOverlay"></div>
+<div class="sheet" id="pmSheet">
+  <div class="sheet-handle"></div>
+  <div class="sheet-title">計時器設定</div>
+  <div class="sheet-section">
+    <div class="sheet-row">
+      <span class="sheet-row-label">🍅　專注時長</span>
+      <div class="sheet-stepper">
+        <button class="step-btn" data-target="focus" data-dir="-1">−</button>
+        <span class="step-val" id="pmFocusVal">25</span>
+        <button class="step-btn" data-target="focus" data-dir="1">+</button>
+      </div>
+    </div>
+    <div class="sheet-row">
+      <span class="sheet-row-label">🌿　短休息</span>
+      <div class="sheet-stepper">
+        <button class="step-btn" data-target="short" data-dir="-1">−</button>
+        <span class="step-val" id="pmShortVal">5</span>
+        <button class="step-btn" data-target="short" data-dir="1">+</button>
+      </div>
+    </div>
+    <div class="sheet-row">
+      <span class="sheet-row-label">☕　長休息</span>
+      <div class="sheet-stepper">
+        <button class="step-btn" data-target="long" data-dir="-1">−</button>
+        <span class="step-val" id="pmLongVal">15</span>
+        <button class="step-btn" data-target="long" data-dir="1">+</button>
+      </div>
+    </div>
+  </div>
+  <div class="sheet-section">
+    <div class="sheet-row">
+      <span class="sheet-row-label">🔁　長休息間隔</span>
+      <div class="sheet-stepper">
+        <button class="step-btn" data-target="interval" data-dir="-1">−</button>
+        <span class="step-val" id="pmIntervalVal">4</span>
+        <button class="step-btn" data-target="interval" data-dir="1">+</button>
+      </div>
+    </div>
+  </div>
+  <div class="sheet-btn-row">
+    <button class="sheet-done-btn" id="pmCloseSheet">完成</button>
+  </div>
+</div>
+
+<!-- Water Setup Sheet -->
+<div class="sheet-overlay" id="waterOverlay"></div>
+<div class="sheet water-setup-sheet" id="waterSheet">
+  <div class="sheet-handle"></div>
+  <div class="sheet-title">喝水設定</div>
+  <div style="padding: 0 16px;">
+    <div style="font-size:13px;font-weight:600;color:var(--sec);margin-bottom:6px;">性別</div>
+    <div class="gender-row">
+      <div class="gender-card active" id="genderMale" onclick="selectGender('male')">
+        <span class="gender-emoji">👨</span>
+        <span class="gender-label">男性</span>
+      </div>
+      <div class="gender-card" id="genderFemale" onclick="selectGender('female')">
+        <span class="gender-emoji">👩</span>
+        <span class="gender-label">女性</span>
+      </div>
+    </div>
+  </div>
+  <div class="sheet-section">
+    <div class="sheet-row">
+      <span class="sheet-row-label">⚖️　體重</span>
+      <div class="sheet-stepper">
+        <button class="step-btn" id="weightMinus" onclick="stepWeight(-1)">−</button>
+        <span class="step-val" id="weightVal">60</span>
+        <span style="font-size:13px;color:var(--sec);margin-left:-8px;">kg</span>
+        <button class="step-btn" id="weightPlus" onclick="stepWeight(1)">+</button>
+      </div>
+    </div>
+    <div class="sheet-row">
+      <span class="sheet-row-label">⏰　提醒間隔</span>
+      <div class="sheet-stepper">
+        <button class="step-btn" onclick="stepReminder(-5)">−</button>
+        <span class="step-val" id="reminderVal">30</span>
+        <span style="font-size:13px;color:var(--sec);margin-left:-8px;">分</span>
+        <button class="step-btn" onclick="stepReminder(5)">+</button>
+      </div>
+    </div>
+  </div>
+  <div class="water-goal-display" style="margin: 0 16px 12px;">
+    <div class="water-goal-big" id="waterGoalDisplay">2,100 ml</div>
+    <div class="water-goal-formula" id="waterGoalFormula">60 kg × 35 ml/kg（男性）</div>
+  </div>
+  <div class="sheet-btn-row">
+    <button class="sheet-done-btn" style="background:var(--water);" id="waterSaveBtn">儲存</button>
+  </div>
+  <div style="text-align:center;font-size:11px;color:var(--sec);padding:8px 0 4px;">衛生福利部國民健康署建議</div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════════════════
+// UTILITIES
+// ═══════════════════════════════════════════════════════════════════════════
+const CIRCUMFERENCE = 2 * Math.PI * 108; // 678.58
+const WATER_CIRC    = 2 * Math.PI * 88;  // 552.92
+
+function todayKey() {
+  const d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+
+function monthKey(y, m) {
+  return y + '-' + String(m+1).padStart(2,'0');
+}
+
+function fmtTime(s) {
+  return String(Math.floor(s/60)).padStart(2,'0') + ':' + String(s%60).padStart(2,'0');
+}
+
+function fmtHM(mins) {
+  const h = Math.floor(mins/60), m = mins%60;
+  return h > 0 ? `${h}h ${m}m` : `${m} 分`;
+}
+
+function fmtNum(n) { return n.toLocaleString(); }
+
+function clamp(val, lo, hi) { return Math.max(lo, Math.min(hi, val)); }
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+// ─── localStorage ──────────────────────────────────────────────────────────
+function loadSettings() {
+  try { return JSON.parse(localStorage.getItem('pm_settings')) || {}; } catch { return {}; }
+}
+function saveSettings(s) { localStorage.setItem('pm_settings', JSON.stringify(s)); }
+
+function loadRecords() {
+  try { return JSON.parse(localStorage.getItem('pm_records')) || {}; } catch { return {}; }
+}
+function saveRecords(r) { localStorage.setItem('pm_records', JSON.stringify(r)); }
+
+function getTodayRecord() {
+  const recs = loadRecords();
+  const k = todayKey();
+  if (!recs[k]) recs[k] = { pomodoros: 0, focusMinutes: 0, waterLog: [] };
+  return { recs, k, rec: recs[k] };
+}
+
+// ─── Settings state ────────────────────────────────────────────────────────
+const s = loadSettings();
+const pmSettings = {
+  focus:    s.focus    || 25,
+  short:    s.short    || 5,
+  long:     s.long     || 15,
+  interval: s.interval || 4,
+  gender:   s.gender   || 'male',
+  weight:   s.weight   || 60,
+  waterGoal:         s.waterGoal         || 2100,
+  waterReminderMins: s.waterReminderMins || 30,
+};
+
+function persistSettings() { saveSettings(pmSettings); }
+
+// ═══════════════════════════════════════════════════════════════════════════
+// TAB NAVIGATION
+// ═══════════════════════════════════════════════════════════════════════════
+const TABS = ['water','pomodoro','calendar','report'];
+const TAB_ACTIVE_CLASS = { pomodoro:'active-pomodoro', water:'active-water', calendar:'active-calendar', report:'active-report' };
+let currentTab = 'water';
+
+document.querySelectorAll('.tab-item').forEach(btn => {
+  btn.addEventListener('click', () => switchTab(btn.dataset.tab));
+});
+
+function switchTab(tab) {
+  // Hide all pages
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  // Deactivate all tab items
+  document.querySelectorAll('.tab-item').forEach(b => {
+    Object.values(TAB_ACTIVE_CLASS).forEach(c => b.classList.remove(c));
+  });
+
+  document.getElementById('page-' + tab).classList.add('active');
+  const btn = document.querySelector(`.tab-item[data-tab="${tab}"]`);
+  if (btn) btn.classList.add(TAB_ACTIVE_CLASS[tab]);
+
+  currentTab = tab;
+
+  if (tab === 'water')    renderWater();
+  if (tab === 'calendar') renderCalendar();
+  if (tab === 'report')   renderReport();
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// POMODORO TIMER
+// ═══════════════════════════════════════════════════════════════════════════
+const pmCard       = document.getElementById('pmTimerCard');
+const pmDisplay    = document.getElementById('pmTimerDisplay');
+const pmModeLabel  = document.getElementById('pmModeLabel');
+const pmRing       = document.getElementById('pmRing');
+const pmRingCont   = document.getElementById('pmRingContainer');
+const pmPlayBtn    = document.getElementById('pmPlayBtn');
+const pmPlayIcon   = document.getElementById('pmPlayIcon');
+const pmResetBtn   = document.getElementById('pmResetBtn');
+const pmSkipBtn    = document.getElementById('pmSkipBtn');
+
+const modeConfig = {
+  focus: { label: '專注時間', bodyClass: '' },
+  short: { label: '短休息',   bodyClass: 'mode-short' },
+  long:  { label: '長休息',   bodyClass: 'mode-long'  },
+};
+
+let pmMode       = 'focus';
+let pmTotalSecs  = pmSettings.focus * 60;
+let pmRemaining  = pmTotalSecs;
+let pmRunning    = false;
+let pmTimer      = null;
+let pmSessionsDone = 0;
+
+function pmSetMode(mode) {
+  pmCard.className = pmCard.className.replace(/mode-\w+/g, '').trim();
+  pmMode = mode;
+  const cfg = modeConfig[mode];
+  if (cfg.bodyClass) pmCard.classList.add(cfg.bodyClass);
+  pmModeLabel.textContent = cfg.label;
+  pmTotalSecs = pmSettings[mode] * 60;
+  pmRemaining = pmTotalSecs;
+  pmUpdateDisplay();
+  document.querySelectorAll('.seg-btn').forEach(b => b.classList.toggle('active', b.dataset.mode === mode));
+}
+
+function pmUpdateRing() {
+  const progress = pmTotalSecs > 0 ? pmRemaining / pmTotalSecs : 0;
+  const offset = CIRCUMFERENCE * (1 - progress);
+  pmRing.style.strokeDasharray = CIRCUMFERENCE;
+  pmRing.style.strokeDashoffset = offset;
+}
+
+function pmUpdateDisplay() {
+  pmDisplay.textContent = fmtTime(pmRemaining);
+  pmUpdateRing();
+}
+
+function pmSetPlayIcon(playing) {
+  pmPlayIcon.innerHTML = playing
+    ? '<rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/>'
+    : '<polygon points="5,3 19,12 5,21"/>';
+}
+
+function pmRebuildDots() {
+  const wrap = document.getElementById('pmSessionDots');
+  wrap.innerHTML = '';
+  const intvl = pmSettings.interval;
+  const done = pmSessionsDone % intvl;
+  for (let i = 0; i < intvl; i++) {
+    const d = document.createElement('div');
+    d.className = 'dot' + (i < done ? ' done' : '');
+    wrap.appendChild(d);
+  }
+  const cur = done + 1;
+  document.getElementById('pmCycleNum').textContent = cur;
+  document.getElementById('pmSessionNum').textContent = `${cur}/${intvl}`;
+  document.getElementById('pmIntervalDisplay').textContent = intvl;
+}
+
+function pmCompleteSession() {
+  pmRunning = false;
+  clearInterval(pmTimer);
+  pmSetPlayIcon(false);
+  pmRingCont.classList.remove('running');
+
+  if (pmMode === 'focus') {
+    pmSessionsDone++;
+
+    // Save record
+    const { recs, k, rec } = getTodayRecord();
+    rec.pomodoros++;
+    rec.focusMinutes += pmSettings.focus;
+    recs[k] = rec;
+    saveRecords(recs);
+
+    // Update stats display
+    document.getElementById('pmTodayCount').textContent = rec.pomodoros;
+    document.getElementById('pmTotalTime').textContent  = fmtHM(rec.focusMinutes);
+    pmRebuildDots();
+
+    if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+      new Notification('🍅 專注完成！', { body: '休息一下吧' });
+    }
+
+    if (pmSessionsDone % pmSettings.interval === 0) {
+      showToast('🎉 完成 ' + pmSettings.interval + ' 輪！享受長休息');
+      pmSetMode('long');
+    } else {
+      showToast('✅ 專注完成！去短暫休息一下');
+      pmSetMode('short');
+    }
+  } else {
+    showToast('🍅 準備好了，開始新的專注');
+    pmSetMode('focus');
+  }
+}
+
+function pmTick() {
+  if (pmRemaining <= 0) { pmCompleteSession(); return; }
+  pmRemaining--;
+  pmUpdateDisplay();
+  document.title = fmtTime(pmRemaining) + ' · 蕃茄鐘';
+}
+
+pmPlayBtn.addEventListener('click', () => {
+  if (pmRunning) {
+    pmRunning = false;
+    clearInterval(pmTimer);
+    pmSetPlayIcon(false);
+    pmRingCont.classList.remove('running');
+  } else {
+    pmRunning = true;
+    pmTimer = setInterval(pmTick, 1000);
+    pmSetPlayIcon(true);
+    pmRingCont.classList.add('running');
+    if (typeof Notification !== 'undefined' && Notification.permission === 'default') {
+      Notification.requestPermission();
+    }
+  }
+});
+
+pmResetBtn.addEventListener('click', () => {
+  pmRunning = false; clearInterval(pmTimer);
+  pmSetPlayIcon(false); pmRingCont.classList.remove('running');
+  pmRemaining = pmTotalSecs; pmUpdateDisplay();
+});
+
+pmSkipBtn.addEventListener('click', () => {
+  pmRunning = false; clearInterval(pmTimer);
+  pmSetPlayIcon(false); pmRingCont.classList.remove('running');
+  pmCompleteSession();
+});
+
+document.querySelectorAll('.seg-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    pmRunning = false; clearInterval(pmTimer);
+    pmSetPlayIcon(false); pmRingCont.classList.remove('running');
+    pmSetMode(btn.dataset.mode);
+  });
+});
+
+// Pomodoro settings sheet
+const pmOverlay = document.getElementById('pmOverlay');
+const pmSheet   = document.getElementById('pmSheet');
+document.getElementById('pmSettingsBtn').addEventListener('click', () => {
+  document.getElementById('pmFocusVal').textContent    = pmSettings.focus;
+  document.getElementById('pmShortVal').textContent    = pmSettings.short;
+  document.getElementById('pmLongVal').textContent     = pmSettings.long;
+  document.getElementById('pmIntervalVal').textContent = pmSettings.interval;
+  pmOverlay.classList.add('visible');
+  pmSheet.classList.add('visible');
+});
+pmOverlay.addEventListener('click', closePmSheet);
+document.getElementById('pmCloseSheet').addEventListener('click', closePmSheet);
+
+function closePmSheet() {
+  pmOverlay.classList.remove('visible');
+  pmSheet.classList.remove('visible');
+  persistSettings();
+  if (!pmRunning) { pmTotalSecs = pmSettings[pmMode] * 60; pmRemaining = pmTotalSecs; pmUpdateDisplay(); }
+  pmRebuildDots();
+}
+
+pmSheet.querySelectorAll('.step-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const target = btn.dataset.target;
+    const dir    = parseInt(btn.dataset.dir);
+    const ranges = { focus: [1, 60], short: [1, 30], long: [1, 60], interval: [1, 8] };
+    const [lo, hi] = ranges[target];
+    pmSettings[target] = clamp(pmSettings[target] + dir, lo, hi);
+    document.getElementById('pm' + target.charAt(0).toUpperCase() + target.slice(1) + 'Val').textContent = pmSettings[target];
+    if (target === 'interval') pmRebuildDots();
+  });
+});
+
+// Init pomodoro
+(function initPomodoro() {
+  const { rec } = getTodayRecord();
+  document.getElementById('pmTodayCount').textContent = rec.pomodoros;
+  document.getElementById('pmTotalTime').textContent  = fmtHM(rec.focusMinutes);
+  pmSetMode('focus');
+  pmRebuildDots();
+  pmRing.style.strokeDasharray  = CIRCUMFERENCE;
+  pmRing.style.strokeDashoffset = 0;
+})();
+
+// ═══════════════════════════════════════════════════════════════════════════
+// WATER TRACKER
+// ═══════════════════════════════════════════════════════════════════════════
+let waterReminderTimer = null;
+let waterReminderSecsLeft = pmSettings.waterReminderMins * 60;
+let waterReminderInterval = null;
+
+function calcWaterGoal(gender, weight) {
+  const goal = gender === 'male' ? weight * 35 : weight * 30;
+  return clamp(goal, 1500, 3000);
+}
+
+function getTodayWaterLog() {
+  const { rec } = getTodayRecord();
+  return rec.waterLog || [];
+}
+
+function getTodayWaterTotal() {
+  return getTodayWaterLog().reduce((s, e) => s + e.amount, 0);
+}
+
+function addWater(amount) {
+  const { recs, k, rec } = getTodayRecord();
+  if (!rec.waterLog) rec.waterLog = [];
+  const now = new Date();
+  const time = String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0');
+  rec.waterLog.push({ time, amount });
+  recs[k] = rec;
+  saveRecords(recs);
+  renderWater();
+  resetWaterReminder();
+  showToast('💧 +' + amount + ' ml');
+}
+
+function deleteWaterEntry(idx) {
+  const { recs, k, rec } = getTodayRecord();
+  if (!rec.waterLog) return;
+  rec.waterLog.splice(idx, 1);
+  recs[k] = rec;
+  saveRecords(recs);
+  renderWater();
+}
+
+function renderWater() {
+  const goal  = pmSettings.waterGoal;
+  const log   = getTodayWaterLog();
+  const total = log.reduce((s, e) => s + e.amount, 0);
+  const pct   = goal > 0 ? Math.min(1, total / goal) : 0;
+
+  // Ring
+  const offset = WATER_CIRC * (1 - pct);
+  document.getElementById('waterRingProg').style.strokeDashoffset = offset;
+  document.getElementById('waterTotal').textContent = fmtNum(total);
+  document.getElementById('waterGoalTxt').textContent = '目標：' + fmtNum(goal) + ' ml';
+  document.getElementById('waterPct').textContent = Math.round(pct * 100) + '%';
+
+  // Log list
+  const card = document.getElementById('waterLogCard');
+  if (log.length === 0) {
+    card.innerHTML = '<div class="log-empty">今日尚未記錄</div>';
+  } else {
+    card.innerHTML = log.map((e, i) => {
+      const barPct = Math.min(1, e.amount / 500);
+      return `<div class="log-row">
+        <span class="log-time">${e.time}</span>
+        <span class="log-amount">+${e.amount} ml</span>
+        <div class="log-bar-wrap"><div class="log-bar" style="width:${barPct*100}%"></div></div>
+        <button class="log-del" onclick="deleteWaterEntry(${i})" aria-label="刪除">×</button>
+      </div>`;
+    }).join('');
+  }
+
+  // Smart alerts
+  updateWaterAlerts(total, goal);
+}
+
+// ─── Smart Water Alerts ────────────────────────────────────────────────────
+const WATER_START_HOUR  = 7;   // 早上 7 點開始喝水
+const WATER_CUTOFF_HOUR = 21;  // 晚上 9 點截止
+
+function updateWaterAlerts(total, goal) {
+  const now    = new Date();
+  const hour   = now.getHours();
+  const minute = now.getMinutes();
+
+  const warnEl   = document.getElementById('waterAlertWarn');
+  const cutoffEl = document.getElementById('waterAlertCutoff');
+  if (!warnEl || !cutoffEl) return;
+
+  // ── 截止時間：晚上 9 點後不再提醒補水，只顯示停止提示 ──
+  if (hour >= WATER_CUTOFF_HOUR) {
+    cutoffEl.classList.add('visible');
+    warnEl.classList.remove('visible');
+    return;
+  }
+  cutoffEl.classList.remove('visible');
+
+  // ── 目標已達成，無需警告 ──
+  const deficit = goal - total;
+  if (deficit <= 0) {
+    warnEl.classList.remove('visible');
+    return;
+  }
+
+  // ── 計算今日進度預期值（線性從 7:00 到 21:00） ──
+  const totalDayMins   = (WATER_CUTOFF_HOUR - WATER_START_HOUR) * 60;
+  const elapsedMins    = Math.max(0, (hour - WATER_START_HOUR) * 60 + minute);
+  const expectedByNow  = goal * Math.min(1, elapsedMins / totalDayMins);
+  const isBehind       = total < expectedByNow - 100; // 落後超過 100 ml 才警告
+
+  if (!isBehind || hour < WATER_START_HOUR) {
+    warnEl.classList.remove('visible');
+    return;
+  }
+
+  // ── 計算剩餘時間與建議量 ──
+  const minsLeft        = (WATER_CUTOFF_HOUR - hour) * 60 - minute;
+  const hoursLeft       = Math.floor(minsLeft / 60);
+  const minsLeftRem     = minsLeft % 60;
+  const deficitRounded  = Math.round(deficit / 50) * 50;
+  const intervals       = Math.max(1, Math.floor(minsLeft / 30)); // 每 30 分鐘一次
+  const perInterval     = Math.round(deficit / intervals / 50) * 50;
+
+  let timeStr;
+  if (hoursLeft > 0 && minsLeftRem > 0) timeStr = `${hoursLeft} 小時 ${minsLeftRem} 分鐘`;
+  else if (hoursLeft > 0)               timeStr = `${hoursLeft} 小時`;
+  else                                  timeStr = `${minsLeft} 分鐘`;
+
+  document.getElementById('waterAlertWarnMsg').textContent =
+    `剩餘 ${timeStr}，還差 ${fmtNum(deficitRounded)} ml — 請加油！`;
+  document.getElementById('waterAlertWarnHint').textContent =
+    `建議每 30 分鐘補充 ${fmtNum(clamp(perInterval, 100, 500))} ml，小口慢飲`;
+
+  warnEl.classList.add('visible');
+}
+
+// 每分鐘重新評估警告（不需要重整整個 water 頁）
+setInterval(() => {
+  if (document.getElementById('page-water').classList.contains('active')) {
+    const total = getTodayWaterTotal();
+    updateWaterAlerts(total, pmSettings.waterGoal);
+    updateReminderDisplay();
+  }
+}, 60000);
+
+function resetWaterReminder() {
+  clearTimeout(waterReminderTimer);
+  clearInterval(waterReminderInterval);
+  waterReminderSecsLeft = pmSettings.waterReminderMins * 60;
+  updateReminderDisplay();
+
+  waterReminderInterval = setInterval(() => {
+    waterReminderSecsLeft--;
+    updateReminderDisplay();
+    if (waterReminderSecsLeft <= 0) {
+      clearInterval(waterReminderInterval);
+      fireWaterReminder();
+    }
+  }, 1000);
+}
+
+function updateReminderDisplay() {
+  const el = document.getElementById('waterReminder');
+  if (!el) return;
+  const mins = Math.ceil(waterReminderSecsLeft / 60);
+  el.textContent = mins > 0 ? `下次提醒：${mins} 分鐘後` : '該喝水了！💧';
+}
+
+function fireWaterReminder() {
+  showToast('💧 該喝水了！');
+  if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+    new Notification('💧 喝水提醒', { body: '記得補充水分！' });
+  }
+  resetWaterReminder();
+}
+
+// Water setup sheet
+const waterOverlay = document.getElementById('waterOverlay');
+const waterSheet   = document.getElementById('waterSheet');
+document.getElementById('waterSettingsBtn').addEventListener('click', openWaterSheet);
+waterOverlay.addEventListener('click', closeWaterSheet);
+document.getElementById('waterSaveBtn').addEventListener('click', saveWaterSettings);
+
+function openWaterSheet() {
+  document.getElementById('weightVal').textContent   = pmSettings.weight;
+  document.getElementById('reminderVal').textContent = pmSettings.waterReminderMins;
+  selectGenderUI(pmSettings.gender);
+  updateWaterGoalDisplay();
+  waterOverlay.classList.add('visible');
+  waterSheet.classList.add('visible');
+}
+
+function closeWaterSheet() {
+  waterOverlay.classList.remove('visible');
+  waterSheet.classList.remove('visible');
+}
+
+function saveWaterSettings() {
+  persistSettings();
+  closeWaterSheet();
+  resetWaterReminder();
+  renderWater();
+}
+
+function selectGender(g) {
+  pmSettings.gender = g;
+  selectGenderUI(g);
+  pmSettings.waterGoal = calcWaterGoal(pmSettings.gender, pmSettings.weight);
+  updateWaterGoalDisplay();
+}
+
+function selectGenderUI(g) {
+  document.getElementById('genderMale').classList.toggle('active',   g === 'male');
+  document.getElementById('genderFemale').classList.toggle('active', g === 'female');
+}
+
+function stepWeight(d) {
+  pmSettings.weight = clamp(pmSettings.weight + d, 30, 200);
+  document.getElementById('weightVal').textContent = pmSettings.weight;
+  pmSettings.waterGoal = calcWaterGoal(pmSettings.gender, pmSettings.weight);
+  updateWaterGoalDisplay();
+}
+
+function stepReminder(d) {
+  pmSettings.waterReminderMins = clamp(pmSettings.waterReminderMins + d, 10, 120);
+  document.getElementById('reminderVal').textContent = pmSettings.waterReminderMins;
+}
+
+function updateWaterGoalDisplay() {
+  const goal    = calcWaterGoal(pmSettings.gender, pmSettings.weight);
+  const mul     = pmSettings.gender === 'male' ? 35 : 30;
+  const genTxt  = pmSettings.gender === 'male' ? '男性' : '女性';
+  document.getElementById('waterGoalDisplay').textContent  = fmtNum(goal) + ' ml';
+  document.getElementById('waterGoalFormula').textContent  = `${pmSettings.weight} kg × ${mul} ml/kg（${genTxt}）`;
+  pmSettings.waterGoal = goal;
+}
+
+// Init water
+resetWaterReminder();
+renderWater();
+
+// ═══════════════════════════════════════════════════════════════════════════
+// CALENDAR
+// ═══════════════════════════════════════════════════════════════════════════
+let calYear  = new Date().getFullYear();
+let calMonth = new Date().getMonth(); // 0-indexed
+let calSelectedDay = null;
+
+document.getElementById('calPrev').addEventListener('click', () => {
+  calMonth--;
+  if (calMonth < 0) { calMonth = 11; calYear--; }
+  renderCalendar();
+});
+document.getElementById('calNext').addEventListener('click', () => {
+  calMonth++;
+  if (calMonth > 11) { calMonth = 0; calYear++; }
+  renderCalendar();
+});
+
+function renderCalendar() {
+  const today     = new Date();
+  const todayY    = today.getFullYear();
+  const todayM    = today.getMonth();
+  const todayD    = today.getDate();
+  const isThisMonth = (calYear === todayY && calMonth === todayM);
+
+  document.getElementById('calMonthLabel').textContent = `${calYear}年${calMonth+1}月`;
+
+  const firstDow  = new Date(calYear, calMonth, 1).getDay(); // 0=Sun
+  const daysTotal = new Date(calYear, calMonth+1, 0).getDate();
+  const recs      = loadRecords();
+
+  const grid = document.getElementById('calGrid');
+  grid.innerHTML = '';
+
+  // Empty cells before first day
+  for (let i = 0; i < firstDow; i++) {
+    const empty = document.createElement('div');
+    empty.className = 'cal-cell';
+    grid.appendChild(empty);
+  }
+
+  for (let day = 1; day <= daysTotal; day++) {
+    const key = calYear + '-' + String(calMonth+1).padStart(2,'0') + '-' + String(day).padStart(2,'0');
+    const rec = recs[key] || {};
+    const isToday = isThisMonth && day === todayD;
+    const dow = (firstDow + day - 1) % 7;
+
+    const cell = document.createElement('div');
+    cell.className = 'cal-cell';
+    cell.addEventListener('click', () => showCalDetail(day, key, rec));
+
+    const numDiv = document.createElement('div');
+    numDiv.className = 'cal-day-num' + (isToday ? ' today' : dow === 0 ? ' sun-num' : dow === 6 ? ' sat-num' : '');
+    numDiv.textContent = day;
+    cell.appendChild(numDiv);
+
+    // Dots
+    const pomos = rec.pomodoros || 0;
+    const waterTotal = (rec.waterLog || []).reduce((s, e) => s + e.amount, 0);
+    const hasWater = waterTotal > 0;
+
+    if (pomos > 0 || hasWater) {
+      const dotsDiv = document.createElement('div');
+      dotsDiv.className = 'cal-dots';
+      const dotCount = Math.min(pomos, 3);
+      for (let d = 0; d < dotCount; d++) {
+        const dot = document.createElement('div');
+        dot.className = 'cal-dot red';
+        dotsDiv.appendChild(dot);
+      }
+      if (hasWater) {
+        const dot = document.createElement('div');
+        dot.className = 'cal-dot blue';
+        dotsDiv.appendChild(dot);
+      }
+      cell.appendChild(dotsDiv);
+    }
+
+    grid.appendChild(cell);
+  }
+
+  // Hide detail if shown
+  document.getElementById('calDetailCard').classList.remove('visible');
+}
+
+function showCalDetail(day, key, rec) {
+  const card   = document.getElementById('calDetailCard');
+  const title  = document.getElementById('calDetailTitle');
+  const body   = document.getElementById('calDetailBody');
+
+  title.textContent = `${calYear}年${calMonth+1}月${day}日`;
+
+  const pomos  = rec.pomodoros || 0;
+  const focMin = rec.focusMinutes || 0;
+  const water  = (rec.waterLog || []).reduce((s, e) => s + e.amount, 0);
+
+  let html = '';
+  if (pomos === 0 && water === 0) {
+    html = '<div class="cal-detail-row">無紀錄</div>';
+  } else {
+    if (pomos > 0) {
+      html += `<div class="cal-detail-row">🍅 番茄：${pomos} 輪（專注 ${fmtHM(focMin)}）</div>`;
+    }
+    if (water > 0) {
+      html += `<div class="cal-detail-row">💧 喝水：${fmtNum(water)} ml</div>`;
+    }
+  }
+  body.innerHTML = html;
+  card.classList.add('visible');
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// REPORT
+// ═══════════════════════════════════════════════════════════════════════════
+let repYear  = new Date().getFullYear();
+let repMonth = new Date().getMonth();
+
+document.getElementById('repPrev').addEventListener('click', () => {
+  repMonth--;
+  if (repMonth < 0) { repMonth = 11; repYear--; }
+  renderReport();
+});
+document.getElementById('repNext').addEventListener('click', () => {
+  repMonth++;
+  if (repMonth > 11) { repMonth = 0; repYear++; }
+  renderReport();
+});
+
+function renderReport() {
+  document.getElementById('repMonthLabel').textContent = `${repYear}年${repMonth+1}月`;
+
+  const recs     = loadRecords();
+  const daysInM  = new Date(repYear, repMonth+1, 0).getDate();
+  const goal     = pmSettings.waterGoal;
+
+  let totalPomos = 0, totalFocMin = 0, totalWater = 0, daysWithPomo = 0, daysWithWater = 0;
+  const pomoData  = [];
+  const waterData = [];
+
+  for (let day = 1; day <= daysInM; day++) {
+    const key = repYear + '-' + String(repMonth+1).padStart(2,'0') + '-' + String(day).padStart(2,'0');
+    const rec = recs[key] || {};
+    const p   = rec.pomodoros || 0;
+    const w   = (rec.waterLog || []).reduce((s, e) => s + e.amount, 0);
+    pomoData.push(p);
+    waterData.push(w);
+    totalPomos  += p;
+    totalFocMin += rec.focusMinutes || 0;
+    totalWater  += w;
+    if (p > 0)  daysWithPomo++;
+    if (w > 0)  daysWithWater++;
+  }
+
+  const avgWater   = daysWithWater > 0 ? Math.round(totalWater / daysWithWater) : 0;
+  const avgPomoDay = daysWithPomo  > 0 ? (totalPomos / daysWithPomo).toFixed(1) : '0';
+
+  // Summary cards
+  const summaries = [
+    { emoji: '🍅', label: '本月番茄', val: totalPomos,        unit: '輪' },
+    { emoji: '⏱', label: '總專注',   val: fmtHM(totalFocMin), unit: '' },
+    { emoji: '💧', label: '平均喝水', val: fmtNum(avgWater),   unit: 'ml/日' },
+    { emoji: '📈', label: '平均輪次', val: avgPomoDay,         unit: '次/日' },
+  ];
+  document.getElementById('repSummaryGrid').innerHTML = summaries.map(c => `
+    <div class="summary-card">
+      <span class="summary-card-emoji">${c.emoji}</span>
+      <div class="summary-card-val">${c.val} <span class="summary-card-unit">${c.unit}</span></div>
+      <div class="summary-card-label">${c.label}</div>
+    </div>`).join('');
+
+  // Charts
+  renderBarChart('repPomoChart', pomoData,  '#FF3B30', null,  '輪');
+  renderBarChart('repWaterChart', waterData, '#007AFF', goal, 'ml');
+}
+
+function renderBarChart(containerId, data, color, goalLine, unit) {
+  const container = document.getElementById(containerId);
+  const n = data.length;
+  if (n === 0) { container.innerHTML = '<div style="padding:20px;text-align:center;color:var(--sec);font-size:14px;">無資料</div>'; return; }
+
+  const W  = 340;
+  const H  = 80;
+  const PL = 4, PR = 4, PT = 4, PB = 20;
+  const chartW = W - PL - PR;
+  const chartH = H - PT - PB;
+  const barW = chartW / n;
+  const barGap = barW * 0.18;
+  const bw = barW - barGap * 2;
+
+  const maxVal = Math.max(...data, goalLine || 0, 1);
+  const lightColor = color === '#FF3B30' ? 'rgba(255,59,48,.1)' : 'rgba(0,122,255,.1)';
+
+  let svgBars = '';
+  for (let i = 0; i < n; i++) {
+    const x = PL + i * barW + barGap;
+    const val = data[i];
+    const barH = chartH * (val / maxVal);
+    const y = PT + chartH - barH;
+    // bg bar
+    svgBars += `<rect x="${x.toFixed(1)}" y="${PT}" width="${bw.toFixed(1)}" height="${chartH}" rx="2" fill="${lightColor}"/>`;
+    // value bar
+    if (val > 0) {
+      svgBars += `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${bw.toFixed(1)}" height="${barH.toFixed(1)}" rx="2" fill="${color}"/>`;
+    }
+    // Day label (1 and every 5)
+    const dayNum = i + 1;
+    if (dayNum === 1 || dayNum % 5 === 0) {
+      const lx = (x + bw / 2).toFixed(1);
+      svgBars += `<text x="${lx}" y="${(PT + chartH + 13).toFixed(1)}" font-size="9" fill="#6C6C70" text-anchor="middle">${dayNum}</text>`;
+    }
+  }
+
+  // Goal line
+  let goalSvg = '';
+  if (goalLine && goalLine > 0) {
+    const gy = (PT + chartH * (1 - goalLine / maxVal)).toFixed(1);
+    const dash = '4,3';
+    goalSvg = `<line x1="${PL}" y1="${gy}" x2="${W - PR}" y2="${gy}" stroke="${color}" stroke-width="1.5" stroke-dasharray="${dash}" opacity="0.7"/>`;
+    goalSvg += `<text x="${(W - PR - 2).toFixed(1)}" y="${(parseFloat(gy) - 3).toFixed(1)}" font-size="9" fill="${color}" text-anchor="end" opacity="0.8">目標</text>`;
+  }
+
+  const svg = `<svg viewBox="0 0 ${W} ${H + PB}" xmlns="http://www.w3.org/2000/svg">${svgBars}${goalSvg}</svg>`;
+  container.innerHTML = svg;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════════════════════════════
+// Set calendar and report to current month (March 2026 if date is correct)
+calYear  = new Date().getFullYear();
+calMonth = new Date().getMonth();
+repYear  = calYear;
+repMonth = calMonth;
+
+// Activate tab based on initial display (water is shown first)
+renderWater();
+document.querySelector('.tab-item[data-tab="water"]').classList.add('active-water');
+</script>
+</body>
+</html>
